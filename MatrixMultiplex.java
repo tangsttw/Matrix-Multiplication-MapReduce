@@ -21,7 +21,7 @@ import org.apache.hadoop.util.*;
 
 public class MatrixMultiplex
 {
-    Integer inputSize = new Integer(500);
+    static Integer inputSize = new Integer(100);
 
     // Mapper
     public static class Matrix_Mapper extends Mapper<LongWritable, Text, Text, Text> {
@@ -53,29 +53,23 @@ public class MatrixMultiplex
         public void reduce(Text key, Iterable<Text> values, Context combineOutput) throws IOException, InterruptedException {
             String[] value, nMatch;
 
-            ArrayList<String> arrayM = new ArrayList<String>();
-            ArrayList<String> arrayN = new ArrayList<String>();
-
             Integer product = new Integer(0);
+
+            int[] arrayM = new int[inputSize];
+            int[] arrayN = new int[inputSize];
 
             for (Text val : values) {
                 value = val.toString().split(",");
 
                 if (value[0].equals("M")) {
-                    arrayM.add(value[1]);
-                    arrayM.add(value[2]);
+                    arrayM[Integer.parseInt(value[1])] = Integer.parseInt(value[2]);
                 } else {
-                    arrayN.add(value[1]);
-                    arrayN.add(value[2]);
+                    arrayN[Integer.parseInt(value[1])] = Integer.parseInt(value[2]);
                 }
             }
 
-            for (int i=0; i<arrayM.size(); i+=2) {
-                for (int j=0; j<arrayN.size(); j+=2) {
-                    if (arrayM.get(i).equals(arrayN.get(j))) {
-                        product += Integer.parseInt(arrayM.get(i+1))*Integer.parseInt(arrayN.get(j+1));
-                    }
-                }
+            for (int i=0; i<inputSize; i++) {
+                product += arrayM[i] * arrayN[i];
             }
 
             combineOutput.write(key, new Text(product.toString()));
@@ -87,8 +81,10 @@ public class MatrixMultiplex
         Configuration conf = new Configuration();
         String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 
+        conf.set("mapreduce.output.textoutputformat.separator", ",");
+
         if (otherArgs.length != 2) {
-            System.err.println("Usage: matrix multiplication <in> <out>");
+            System.err.println("Usage: matrix multiplication <input file> <output file>");
             System.exit(2);
         }
 
